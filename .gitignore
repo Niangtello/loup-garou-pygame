@@ -1,0 +1,24 @@
+# Fichiers Python temporaires
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environnement virtuel (adaptez le nom si besoin: venv, .venv, env, etc.)
+venv/
+.venv/
+env/
+ENV/
+
+# Fichiers spécifiques à l'éditeur/IDE (optionnel)
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Fichiers système
+.DS_Store
+Thumbs.db
