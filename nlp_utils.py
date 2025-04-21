@@ -2,16 +2,17 @@
 
 import spacy
 import logging
+import time # Pour le profiling potentiel
 
-# Configuration du logging
+# Configuration du logging (optionnel mais recommandé)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Nom du modèle spaCy à utiliser
+# --- Chargement du modèle spaCy ---
 NOM_MODELE_SPACY = "fr_core_news_sm"
-nlp = None  # Initialisation du modèle
+nlp = None # Initialise à None
 
 try:
-    # Chargement du modèle spaCy
+    logging.info(f"Tentative de chargement du modèle spaCy '{NOM_MODELE_SPACY}'...")
     nlp = spacy.load(NOM_MODELE_SPACY)
     logging.info(f"Modèle spaCy '{NOM_MODELE_SPACY}' chargé avec succès.")
 except OSError:
@@ -20,58 +21,53 @@ except OSError:
 except Exception as e:
     logging.error(f"Une erreur inattendue est survenue lors du chargement du modèle spaCy : {e}")
 
-def analyse_phrase_pour_joueurs(phrase: str) -> list[str]:
+# --- Fonctions d'analyse NLP ---
+
+def analyse_phrase_pour_joueurs(phrase: str, perform_timing: bool = False) -> list[str]:
     """
     Analyse une phrase pour extraire les noms propres (entités PER)
     qui pourraient correspondre à des noms de joueurs.
 
     Args:
         phrase: La chaîne de caractères (message du joueur) à analyser.
+        perform_timing (bool): Si True, loggue le temps pris pour l'analyse.
 
     Returns:
         Une liste contenant les noms de personnes détectés.
-        Retourne une liste vide si le modèle n'est pas chargé ou si aucune personne n'est trouvée.
+        Retourne une liste vide si le modèle n'est pas chargé, si aucune personne n'est trouvée,
+        ou en cas d'erreur.
     """
+    start_time = time.perf_counter() if perform_timing else 0
+
     if nlp is None:
-        logging.warning("Avertissement : Le modèle spaCy n'est pas chargé. L'analyse NLP ne peut pas être effectuée.")
+        # Le warning est déjà émis lors du chargement échoué, on évite de spammer ici.
+        # logging.warning("Avertissement : Modèle spaCy non chargé, analyse impossible.")
         return []
 
     if not phrase or not isinstance(phrase, str):
         logging.debug("Phrase vide ou invalide reçue pour l'analyse.")
         return []
 
+    joueurs_mentionnes = []
     try:
         doc = nlp(phrase)
         joueurs_mentionnes = [ent.text for ent in doc.ents if ent.label_ == "PER"]
 
         if joueurs_mentionnes:
-            logging.debug(f"Analyse NLP de '{phrase}' -> Joueurs mentionnés trouvés : {joueurs_mentionnes}")
-        else:
-            logging.debug(f"Analyse NLP de '{phrase}' -> Aucun joueur mentionné trouvé.")
-
-        return joueurs_mentionnes
+            logging.debug(f"Analyse NLP de '{phrase[:50]}...' -> Joueurs mentionnés trouvés : {joueurs_mentionnes}")
+        # else: # Log moins verbeux
+            # logging.debug(f"Analyse NLP de '{phrase[:50]}...' -> Aucun joueur mentionné trouvé.")
 
     except Exception as e:
-        logging.error(f"Erreur pendant l'analyse NLP de la phrase '{phrase}' : {e}")
-        return []
+        logging.error(f"Erreur pendant l'analyse NLP de la phrase '{phrase[:50]}...' : {e}")
+        # Retourne une liste vide en cas d'erreur
 
-if __name__ == "__main__":
-    if nlp:
-        print("\n--- Test de la fonction analyse_phrase_pour_joueurs ---")
-        phrases_test = [
-            "Je pense que Paul est un loup-garou.",
-            "Marie et Antoine semblent suspects, non ?",
-            "Le village doit voter contre quelqu'un, peut-être Chloé ?",
-            "Je suis certain que c'est Nicolas ou Sophie.",
-            "Personne ne parle.",
-            "J'accuse Pierre de mentir !",
-            12345,
-            ""
-        ]
+    if perform_timing:
+        end_time = time.perf_counter()
+        duration_ms = (end_time - start_time) * 1000
+        logging.debug(f"Analyse NLP traitée en {duration_ms:.2f} ms.")
 
-        for p in phrases_test:
-            resultat = analyse_phrase_pour_joueurs(p)
-            print(f"Phrase : '{p}' -> Joueurs détectés : {resultat}")
-    else:
-        print("\nImpossible d'exécuter les tests car le modèle spaCy n'est pas chargé.")
-        print(f"Assurez-vous d'avoir téléchargé '{NOM_MODELE_SPACY}' avec : python -m spacy download {NOM_MODELE_SPACY}")
+    return joueurs_mentionnes
+
+# --- Exemple d'utilisation (si le fichier est exécuté directement) ---
+# (Le bloc if __name__ == "__main__" reste le même que précédemment)
